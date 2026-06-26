@@ -136,27 +136,19 @@
 
   <div class="card hidden" id="configCard">
     <div class="card-title">2 · 열 설정</div>
+    <p style="font-size:12px;color:#6b7a8d;margin-bottom:12px;">파일을 읽어서 헤더를 자동으로 표시합니다. 해당하는 열을 선택하세요.</p>
     <div class="config-grid">
       <div class="config-item">
         <label>공장코드 열</label>
-        <select id="colFactory">
-          <option value="B">B열</option><option value="A">A열</option>
-          <option value="C">C열</option><option value="D">D열</option><option value="E">E열</option>
-        </select>
+        <select id="colFactory"></select>
       </div>
       <div class="config-item">
         <label>날짜 열</label>
-        <select id="colDate">
-          <option value="H">H열</option><option value="E">E열</option>
-          <option value="F">F열</option><option value="G">G열</option><option value="I">I열</option>
-        </select>
+        <select id="colDate"></select>
       </div>
       <div class="config-item">
         <label>수량 열</label>
-        <select id="colQty">
-          <option value="I">I열</option><option value="J">J열</option>
-          <option value="K">K열</option><option value="H">H열</option><option value="L">L열</option>
-        </select>
+        <select id="colQty"></select>
       </div>
       <div class="config-item">
         <label>시작 행</label>
@@ -199,13 +191,59 @@ function loadFile(file) {
     wb = XLSX.read(e.target.result, { type: 'array' });
     document.getElementById('fileBadge').textContent = '✓ ' + file.name;
     document.getElementById('configCard').classList.remove('hidden');
+
+    // 헤더 행 읽어서 드롭다운 자동 생성
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const startRow = parseInt(document.getElementById('startRow').value) || 6;
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z1000');
+
+    // 헤더는 startRow - 1 행 (5행 = index 4)
+    const headerRowIdx = startRow - 2; // 헤더가 시작행 바로 위
+    const cols = [];
+    for (let c = 0; c <= range.e.c; c++) {
+      const cellAddr = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+      const cell = ws[cellAddr];
+      const colLetter = colIdxToLetter(c);
+      const headerName = cell ? String(cell.v).trim() : '';
+      cols.push({ letter: colLetter, name: headerName, idx: c });
+    }
+
+    // 드롭다운 3개 채우기
+    const defaults = { colFactory: 1, colDate: 7, colQty: 8 }; // B=1, H=7, I=8
+    ['colFactory', 'colDate', 'colQty'].forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '';
+      cols.forEach(col => {
+        const opt = document.createElement('option');
+        opt.value = col.letter;
+        opt.textContent = col.name
+          ? `${col.letter}열 — ${col.name}`
+          : `${col.letter}열`;
+        sel.appendChild(opt);
+      });
+      // 기본값 설정
+      sel.selectedIndex = Math.min(defaults[id], cols.length - 1);
+    });
+
     buildPivot();
   };
   reader.readAsArrayBuffer(file);
 }
 
+// 열 인덱스 → 알파벳 (0→A, 1→B, 25→Z, 26→AA ...)
+function colIdxToLetter(idx) {
+  let letter = '';
+  idx++;
+  while (idx > 0) {
+    const rem = (idx - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    idx = Math.floor((idx - 1) / 26);
+  }
+  return letter;
+}
+
 function colToIdx(col) {
-  col = col.toUpperCase();
+  col = String(col).toUpperCase().trim();
   let n = 0;
   for (let i = 0; i < col.length; i++) n = n * 26 + col.charCodeAt(i) - 64;
   return n - 1;
