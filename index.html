@@ -3,167 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>피벗 테이블 생성기</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>SAP 피벗 테이블 생성기</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
-    background: #f0f4f8;
-    min-height: 100vh;
-    padding: 32px 16px;
-    color: #1a2332;
-  }
-  .container { max-width: 960px; margin: 0 auto; }
-  header { margin-bottom: 28px; }
-  header h1 { font-size: 22px; font-weight: 700; color: #1a2332; letter-spacing: -0.3px; }
-  header p  { margin-top: 6px; font-size: 13px; color: #6b7a8d; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI','Malgun Gothic',sans-serif; background:#f0f4f8; min-height:100vh; padding:32px 16px; color:#1a2332; }
+.container { max-width:1100px; margin:0 auto; }
+header { margin-bottom:28px; }
+header h1 { font-size:22px; font-weight:700; }
+header p  { margin-top:6px; font-size:13px; color:#6b7a8d; }
 
-  .card {
-    background: #fff;
-    border-radius: 14px;
-    border: 1px solid #e2e8f0;
-    padding: 24px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  }
-  .card-title {
-    font-size: 11px; font-weight: 700; color: #6b7a8d;
-    text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 14px;
-  }
+.card { background:#fff; border-radius:14px; border:1px solid #e2e8f0; padding:24px; margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+.card-title { font-size:11px; font-weight:700; color:#6b7a8d; text-transform:uppercase; letter-spacing:.7px; margin-bottom:14px; }
 
-  /* 드롭존 */
-  .drop-zone {
-    border: 1.5px dashed #c5d0de; border-radius: 10px;
-    padding: 40px 20px; text-align: center; cursor: pointer;
-    transition: all 0.2s; background: #fafbfc;
-  }
-  .drop-zone:hover, .drop-zone.drag-over { border-color: #3b7bde; background: #f0f5ff; }
-  .drop-zone .icon { font-size: 36px; margin-bottom: 10px; }
-  .drop-zone p.main { font-size: 15px; font-weight: 600; color: #2d3748; margin-bottom: 4px; }
-  .drop-zone p.sub  { font-size: 12px; color: #9aa5b4; }
+.drop-zone { border:1.5px dashed #c5d0de; border-radius:10px; padding:48px 20px; text-align:center; cursor:pointer; transition:.2s; background:#fafbfc; }
+.drop-zone:hover,.drop-zone.drag-over { border-color:#3b7bde; background:#f0f5ff; }
+.drop-zone .icon { font-size:40px; margin-bottom:12px; }
+.drop-zone p.main { font-size:15px; font-weight:600; color:#2d3748; margin-bottom:4px; }
+.drop-zone p.sub  { font-size:12px; color:#9aa5b4; }
 
-  /* 설정 그리드 */
-  .config-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
-  @media(max-width:600px){ .config-grid { grid-template-columns: repeat(2,1fr); } }
-  .config-item label {
-    display: block; font-size: 11px; font-weight: 600; color: #6b7a8d;
-    margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px;
-  }
-  .config-item select, .config-item input {
-    width: 100%; padding: 8px 10px; border: 1px solid #dde3ec;
-    border-radius: 7px; font-size: 13px; color: #1a2332; background: #fff;
-    outline: none; transition: border-color 0.15s;
-  }
-  .config-item select:focus, .config-item input:focus { border-color: #3b7bde; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:.15s; }
+.btn-secondary { background:#f0f4f8; color:#3b7bde; border:1px solid #c5d0de; }
+.btn-secondary:hover { background:#e2eaf4; }
 
-  /* 버튼 */
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 20px; border-radius: 8px; font-size: 13px;
-    font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
-  }
-  .btn-primary   { background: #3b7bde; color: #fff; }
-  .btn-primary:hover { background: #2d6acc; }
-  .btn-secondary { background: #f0f4f8; color: #3b7bde; border: 1px solid #c5d0de; }
-  .btn-secondary:hover { background: #e2eaf4; }
-  .btn-row { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.result-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+.file-badge { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#2d7a4f; background:#e8f5ee; border-radius:20px; padding:4px 12px; }
+.stat-badge { font-size:12px; color:#6b7a8d; }
 
-  /* 결과 헤더 */
-  .result-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
-  }
-  .file-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12px; font-weight: 600; color: #2d7a4f;
-    background: #e8f5ee; border-radius: 20px; padding: 4px 12px;
-  }
-  .stat-badge { font-size: 12px; color: #6b7a8d; }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+table thead th { background:#1a3a6b; color:#fff; padding:10px 14px; text-align:center; font-weight:700; white-space:nowrap; border:1px solid #15305a; }
+table thead th.left { text-align:left; }
 
-  /* 피벗 테이블 */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+tr.part-row td     { background:#2E5EA8; color:#fff; font-weight:700; padding:9px 14px; border:1px solid #2151a1; }
+tr.supplier-row td { background:#fff; padding:7px 14px; border:1px solid #dde3ec; text-align:right; color:#1a2332; }
+tr.supplier-row:nth-child(even) td { background:#f7f9fc; }
+tr.supplier-row:hover td { background:#edf2fb; }
+tr.grand-row td    { background:#1a3a6b; color:#fff; font-weight:700; padding:9px 14px; border:1px solid #15305a; text-align:right; }
 
-  table thead th {
-    background: #2E5EA8; color: #fff;
-    padding: 10px 16px; text-align: center;
-    font-weight: 700; white-space: nowrap;
-    border: 1px solid #2151a1;
-  }
+td.label { text-align:left !important; }
+td.part-label { text-align:left !important; font-size:13px; }
+td.indent { padding-left:20px !important; }
+td.dash { color:#ccd4e0; }
 
-  table tbody tr:nth-child(odd)  td { background: #ffffff; }
-  table tbody tr:nth-child(even) td { background: #dce6f1; }
-  table tbody tr:hover td { background: #c9d9ee; }
-
-  table tbody td {
-    padding: 8px 16px; border: 1px solid #b8c8df;
-    text-align: right; color: #1a2332;
-  }
-  table tbody td:first-child {
-    text-align: center; font-weight: 600;
-    background: #dce6f1 !important;
-  }
-
-  table tfoot td {
-    padding: 9px 16px; text-align: right;
-    background: #2E5EA8; color: #fff;
-    font-weight: 700; border: 1px solid #2151a1;
-  }
-  table tfoot td:first-child { text-align: center; }
-
-  .hidden { display: none !important; }
+.hidden { display:none !important; }
 </style>
 </head>
 <body>
 <div class="container">
 
   <header>
-    <h1>📊 피벗 테이블 생성기</h1>
-    <p>엑셀 파일을 올리면 공장별 · 연도별 수량 합계를 자동으로 만들어줍니다.</p>
+    <h1>🏭 SAP 피벗 테이블 생성기</h1>
+    <p>SAP 출력물(.xls)을 올리면 부품번호 · 공장 · 공급업체 · 연도별 수량 합계를 자동으로 만들어줍니다.</p>
   </header>
 
   <div class="card">
-    <div class="card-title">1 · 파일 업로드</div>
+    <div class="card-title">파일 업로드</div>
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📂</div>
-      <p class="main">엑셀 파일을 드래그하거나 클릭해서 업로드</p>
-      <p class="sub">.xlsx · .xls 파일 지원</p>
+      <p class="main">SAP 출력물 파일을 드래그하거나 클릭해서 업로드</p>
+      <p class="sub">SAP에서 내보낸 .xls 파일 지원 · 열 선택 불필요, 자동 인식</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
-    </div>
-  </div>
-
-  <div class="card hidden" id="configCard">
-    <div class="card-title">2 · 열 설정</div>
-    <p style="font-size:12px;color:#6b7a8d;margin-bottom:12px;">파일을 읽어서 헤더를 자동으로 표시합니다. 해당하는 열을 선택하세요.</p>
-    <div class="config-grid">
-      <div class="config-item">
-        <label>공장코드 열</label>
-        <select id="colFactory"></select>
-      </div>
-      <div class="config-item">
-        <label>날짜 열</label>
-        <select id="colDate"></select>
-      </div>
-      <div class="config-item">
-        <label>수량 열</label>
-        <select id="colQty"></select>
-      </div>
-      <div class="config-item">
-        <label>시작 행</label>
-        <input type="number" id="startRow" value="6" min="1">
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="buildPivot()">피벗 생성 →</button>
     </div>
   </div>
 
   <div class="card hidden" id="resultCard">
     <div class="result-header">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span class="file-badge" id="fileBadge">✓ 파일명</span>
+        <span class="file-badge" id="fileBadge"></span>
         <span class="stat-badge" id="statBadge"></span>
       </div>
       <button class="btn btn-secondary" onclick="exportExcel()">⬇ 엑셀로 저장</button>
@@ -175,8 +82,9 @@
 
 </div>
 <script>
-let wb = null;
+let rawBuffer = null;
 let pivotCache = null;
+let sapRecords = null;
 
 const dz = document.getElementById('dropZone');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
@@ -188,238 +96,222 @@ function loadFile(file) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    wb = XLSX.read(e.target.result, { type: 'array' });
+    rawBuffer = e.target.result;
     document.getElementById('fileBadge').textContent = '✓ ' + file.name;
-    document.getElementById('configCard').classList.remove('hidden');
-
-    // 헤더 행 읽어서 드롭다운 자동 생성
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const startRow = parseInt(document.getElementById('startRow').value) || 6;
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z1000');
-
-    // 헤더는 startRow - 1 행 (5행 = index 4)
-    const headerRowIdx = startRow - 2; // 헤더가 시작행 바로 위
-    const cols = [];
-    for (let c = 0; c <= range.e.c; c++) {
-      const cellAddr = XLSX.utils.encode_cell({ r: headerRowIdx, c });
-      const cell = ws[cellAddr];
-      const colLetter = colIdxToLetter(c);
-      const headerName = cell ? String(cell.v).trim() : '';
-      cols.push({ letter: colLetter, name: headerName, idx: c });
-    }
-
-    // 드롭다운 3개 채우기
-    const defaults = { colFactory: 1, colDate: 7, colQty: 8 }; // B=1, H=7, I=8
-    ['colFactory', 'colDate', 'colQty'].forEach(id => {
-      const sel = document.getElementById(id);
-      sel.innerHTML = '';
-      cols.forEach(col => {
-        const opt = document.createElement('option');
-        opt.value = col.letter;
-        opt.textContent = col.name
-          ? `${col.letter}열 — ${col.name}`
-          : `${col.letter}열`;
-        sel.appendChild(opt);
-      });
-      // 기본값 설정
-      sel.selectedIndex = Math.min(defaults[id], cols.length - 1);
-    });
-
     buildPivot();
   };
   reader.readAsArrayBuffer(file);
 }
 
-// 열 인덱스 → 알파벳 (0→A, 1→B, 25→Z, 26→AA ...)
-function colIdxToLetter(idx) {
-  let letter = '';
-  idx++;
-  while (idx > 0) {
-    const rem = (idx - 1) % 26;
-    letter = String.fromCharCode(65 + rem) + letter;
-    idx = Math.floor((idx - 1) / 26);
-  }
-  return letter;
-}
+function parseFile() {
+  const bytes = new Uint8Array(rawBuffer);
+  // UTF-16 BOM 확인
+  const isUtf16 = bytes[0] === 0xFF && bytes[1] === 0xFE;
+  const decoder = new TextDecoder(isUtf16 ? 'utf-16' : 'utf-8');
+  const text = decoder.decode(bytes);
+  const lines = text.split('\n');
 
-function colToIdx(col) {
-  col = String(col).toUpperCase().trim();
-  let n = 0;
-  for (let i = 0; i < col.length; i++) n = n * 26 + col.charCodeAt(i) - 64;
-  return n - 1;
-}
+  let currentPart = null;
+  const records = [];
 
-function extractYear(val) {
-  if (!val && val !== 0) return null;
-  if (typeof val === 'number' && val > 10000) {
-    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-    const yr = d.getUTCFullYear();
-    if (yr > 1990 && yr < 2100) return String(yr);
+  for (const line of lines) {
+    const cols = line.replace(/\r$/, '').split('\t');
+    if (cols.length < 2) continue;
+    const val = cols[1].trim();
+
+    // 부품번호 헤더 행 감지
+    if (val && val.length > 5 && val.includes('-') && /^\d/.test(val) && !cols[7]?.trim()) {
+      currentPart = val;
+      continue;
+    }
+
+    // 데이터 행
+    if (currentPart && cols.length > 17) {
+      const sloc     = cols[1].trim();
+      const date     = cols[7].trim();
+      const qtyRaw   = cols[8].trim().replace(/,/g, '');
+      const supplier = cols[17].trim();
+      if (sloc && date && qtyRaw && /^\d/.test(sloc)) {
+        const qty = parseFloat(qtyRaw);
+        const yr  = date.slice(0, 4);
+        if (!isNaN(qty) && /^\d{4}$/.test(yr)) {
+          records.push({ part: currentPart, sloc, supplier, yr, qty });
+        }
+      }
+    }
   }
-  const s = String(val).trim();
-  const m = s.match(/^(\d{4})[.\-\/]/);
-  if (m) return m[1];
-  if (/^\d{8}$/.test(s)) return s.slice(0, 4);
-  if (/^(19|20)\d{2}/.test(s)) return s.slice(0, 4);
-  return null;
+  return records;
 }
 
 function buildPivot() {
-  if (!wb) return;
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const startRow = parseInt(document.getElementById('startRow').value) || 6;
-  const fIdx = colToIdx(document.getElementById('colFactory').value);
-  const dIdx = colToIdx(document.getElementById('colDate').value);
-  const qIdx = colToIdx(document.getElementById('colQty').value);
-  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Z1000');
+  const records = parseFile();
+  sapRecords = records;
 
-  const pivot = {}, factories = new Set(), years = new Set();
-  let totalRows = 0, grandSum = 0;
+  const pivot = {};
+  const parts = new Set(), years = new Set();
+  const partCombos = {};
+  let grandSum = 0;
 
-  for (let r = startRow - 1; r <= range.e.r; r++) {
-    const fCell = ws[XLSX.utils.encode_cell({r, c: fIdx})];
-    const dCell = ws[XLSX.utils.encode_cell({r, c: dIdx})];
-    const qCell = ws[XLSX.utils.encode_cell({r, c: qIdx})];
-    if (!fCell || !dCell || !qCell) continue;
-    const factory = String(fCell.v).trim();
-    const year    = extractYear(dCell.v);
-    const qty     = parseFloat(qCell.v);
-    if (!factory || !year || isNaN(qty)) continue;
-    factories.add(factory);
-    years.add(year);
-    const key = factory + '|' + year;
-    pivot[key] = (pivot[key] || 0) + qty;
-    grandSum += qty;
-    totalRows++;
+  for (const r of records) {
+    const key = `${r.part}|${r.sloc}|${r.supplier}|${r.yr}`;
+    pivot[key] = (pivot[key] || 0) + r.qty;
+    parts.add(r.part);
+    years.add(r.yr);
+    if (!partCombos[r.part]) partCombos[r.part] = new Set();
+    partCombos[r.part].add(`${r.sloc}|${r.supplier}`);
+    grandSum += r.qty;
   }
 
-  const factArr = [...factories].sort();
+  const partArr = [...parts].sort();
   const yearArr = [...years].sort();
-  pivotCache = { pivot, factArr, yearArr, grandSum };
+  pivotCache = { pivot, partArr, yearArr, partCombos, grandSum };
 
-  // HTML 테이블 렌더링
   const tbl = document.getElementById('pivotTable');
-  let html = '<thead><tr><th>공장코드</th>';
+  let html = '<thead><tr>';
+  html += '<th class="left">부품번호</th><th class="left">공장</th><th class="left">공급업체</th>';
   yearArr.forEach(y => html += `<th>${y}</th>`);
   html += '<th>합계</th></tr></thead><tbody>';
 
-  factArr.forEach(f => {
-    let rowSum = 0;
-    html += `<tr><td>${f}</td>`;
-    yearArr.forEach(y => {
-      const v = pivot[f + '|' + y] || 0;
-      rowSum += v;
-      html += v ? `<td>${v.toLocaleString('ko-KR')}</td>`
-                : `<td style="color:#ccd4e0;">-</td>`;
-    });
-    html += `<td><b>${rowSum.toLocaleString('ko-KR')}</b></td></tr>`;
-  });
+  for (const part of partArr) {
+    const combos = [...partCombos[part]].sort();
 
-  html += '</tbody><tfoot><tr><td>전체 합계</td>';
+    // 부품 소계
+    let partTotal = 0;
+    const pyt = {};
+    for (const yr of yearArr) {
+      let s = 0;
+      for (const combo of combos) {
+        const [sl, su] = combo.split('|');
+        s += pivot[`${part}|${sl}|${su}|${yr}`] || 0;
+      }
+      pyt[yr] = s; partTotal += s;
+    }
+
+    html += `<tr class="part-row">`;
+    html += `<td class="part-label" colspan="3">📦 ${part}</td>`;
+    yearArr.forEach(y => html += pyt[y] ? `<td style="text-align:right;">${pyt[y].toLocaleString('ko-KR')}</td>` : `<td class="dash" style="text-align:right;">-</td>`);
+    html += `<td style="text-align:right;">${partTotal.toLocaleString('ko-KR')}</td></tr>`;
+
+    // 공급업체별 행
+    for (const combo of combos) {
+      const [sloc, sup] = combo.split('|');
+      let rowTotal = 0;
+      html += `<tr class="supplier-row"><td class="label indent"></td><td class="label indent">${sloc}</td><td class="label">${sup}</td>`;
+      yearArr.forEach(y => {
+        const v = pivot[`${part}|${sloc}|${sup}|${y}`] || 0;
+        rowTotal += v;
+        html += v ? `<td>${v.toLocaleString('ko-KR')}</td>` : `<td class="dash">-</td>`;
+      });
+      html += `<td><b>${rowTotal.toLocaleString('ko-KR')}</b></td></tr>`;
+    }
+  }
+
+  // 전체 합계
+  html += `<tr class="grand-row"><td class="label" colspan="3">전체 합계</td>`;
   yearArr.forEach(y => {
-    const s = factArr.reduce((a, f) => a + (pivot[f + '|' + y] || 0), 0);
+    const s = records.filter(r => r.yr === y).reduce((a, r) => a + r.qty, 0);
     html += `<td>${s.toLocaleString('ko-KR')}</td>`;
   });
-  html += `<td>${grandSum.toLocaleString('ko-KR')}</td></tr></tfoot>`;
+  html += `<td>${grandSum.toLocaleString('ko-KR')}</td></tr>`;
+  html += '</tbody>';
   tbl.innerHTML = html;
 
+  const partCount = partArr.length;
+  const supplierCount = new Set(records.map(r => r.supplier)).size;
   document.getElementById('statBadge').textContent =
-    `공장 ${factArr.length}개 · 연도 ${yearArr.length}개 · ${totalRows.toLocaleString()}행 처리`;
+    `부품 ${partCount}개 · 공급업체 ${supplierCount}개 · 연도 ${yearArr.length}개 · ${records.length.toLocaleString()}행 처리`;
   document.getElementById('resultCard').classList.remove('hidden');
 }
 
 async function exportExcel() {
   if (!pivotCache) return;
-  const { pivot, factArr, yearArr, grandSum } = pivotCache;
+  const { pivot, partArr, yearArr, partCombos, grandSum } = pivotCache;
+  const records = sapRecords;
 
-  const workbook  = new ExcelJS.Workbook();
-  const sheet     = workbook.addWorksheet('피벗테이블');
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('피벗테이블');
 
-  // ── 열 너비 설정 ──
-  sheet.getColumn(1).width = 14;
-  yearArr.forEach((_, i) => sheet.getColumn(i + 2).width = 14);
-  sheet.getColumn(yearArr.length + 2).width = 16;
+  ws.getColumn(1).width = 18;
+  ws.getColumn(2).width = 10;
+  ws.getColumn(3).width = 12;
+  yearArr.forEach((_, i) => ws.getColumn(i + 4).width = 12);
+  ws.getColumn(yearArr.length + 4).width = 14;
 
-  // ── 공통 스타일 ──
-  const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E5EA8' } };
-  const totalFill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E5EA8' } };
-  const evenFill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } };
-  const labelFill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } };
-  const whiteFill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-  const thinBorder = {
-    top: { style: 'thin', color: { argb: 'FFB8C8DF' } },
-    left: { style: 'thin', color: { argb: 'FFB8C8DF' } },
-    bottom: { style: 'thin', color: { argb: 'FFB8C8DF' } },
-    right: { style: 'thin', color: { argb: 'FFB8C8DF' } },
-  };
   const numFmt = '#,##0';
+  const darkBlue  = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF1A3A6B' } };
+  const midBlue   = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF2E5EA8' } };
+  const white     = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+  const altGray   = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF7F9FC' } };
+  const bdr = { top:{style:'thin',color:{argb:'FFB8C8DF'}}, left:{style:'thin',color:{argb:'FFB8C8DF'}}, bottom:{style:'thin',color:{argb:'FFB8C8DF'}}, right:{style:'thin',color:{argb:'FFB8C8DF'}} };
+  const blueBdr = { top:{style:'thin',color:{argb:'FF2151A1'}}, left:{style:'thin',color:{argb:'FF2151A1'}}, bottom:{style:'thin',color:{argb:'FF2151A1'}}, right:{style:'thin',color:{argb:'FF2151A1'}} };
 
-  // ── 1행: 헤더 ──
-  const headerRow = sheet.addRow(['공장코드', ...yearArr, '합계']);
-  headerRow.eachCell(cell => {
-    cell.fill   = headerFill;
-    cell.font   = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-    cell.border = { top: { style: 'thin', color: { argb: 'FF2151A1' } }, left: { style: 'thin', color: { argb: 'FF2151A1' } }, bottom: { style: 'thin', color: { argb: 'FF2151A1' } }, right: { style: 'thin', color: { argb: 'FF2151A1' } } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  // 헤더 행
+  const hRow = ws.addRow(['부품번호', '공장', '공급업체', ...yearArr, '합계']);
+  hRow.eachCell(c => {
+    c.fill = darkBlue; c.font = { bold:true, color:{argb:'FFFFFFFF'}, size:11 };
+    c.alignment = { horizontal:'center', vertical:'middle' }; c.border = blueBdr;
   });
+  hRow.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+  hRow.getCell(2).alignment = { horizontal:'left', vertical:'middle' };
+  hRow.getCell(3).alignment = { horizontal:'left', vertical:'middle' };
 
-  // ── 데이터 행 ──
-  factArr.forEach((f, ri) => {
-    let rowSum = 0;
-    const rowData = [f];
-    yearArr.forEach(y => {
-      const v = pivot[f + '|' + y] || 0;
-      rowData.push(v || null);
-      rowSum += v;
-    });
-    rowData.push(rowSum);
-
-    const row = sheet.addRow(rowData);
-    const isEven = (ri % 2 === 1);
-
-    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-      cell.border = thinBorder;
-      if (colNum === 1) {
-        cell.fill = labelFill;
-        cell.font = { bold: true, size: 11 };
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      } else {
-        cell.fill = isEven ? evenFill : whiteFill;
-        cell.alignment = { horizontal: 'right', vertical: 'middle' };
-        if (cell.value) cell.numFmt = numFmt;
-        if (colNum === yearArr.length + 2) cell.font = { bold: true, size: 11 };
+  for (const part of partArr) {
+    const combos = [...partCombos[part]].sort();
+    let partTotal = 0;
+    const pyt = {};
+    for (const yr of yearArr) {
+      let s = 0;
+      for (const combo of combos) {
+        const [sl, su] = combo.split('|');
+        s += pivot[`${part}|${sl}|${su}|${yr}`] || 0;
       }
-    });
-  });
-
-  // ── 합계 행 ──
-  const colTotals = ['전체 합계'];
-  yearArr.forEach(y => {
-    colTotals.push(factArr.reduce((a, f) => a + (pivot[f + '|' + y] || 0), 0));
-  });
-  colTotals.push(grandSum);
-
-  const totalRow = sheet.addRow(colTotals);
-  totalRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
-    cell.fill   = totalFill;
-    cell.font   = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-    cell.border = { top: { style: 'thin', color: { argb: 'FF2151A1' } }, left: { style: 'thin', color: { argb: 'FF2151A1' } }, bottom: { style: 'thin', color: { argb: 'FF2151A1' } }, right: { style: 'thin', color: { argb: 'FF2151A1' } } };
-    if (colNum === 1) {
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    } else {
-      cell.alignment = { horizontal: 'right', vertical: 'middle' };
-      if (cell.value) cell.numFmt = numFmt;
+      pyt[yr] = s; partTotal += s;
     }
+
+    // 부품 소계 행
+    const pRow = ws.addRow([`📦 ${part}`, '', '', ...yearArr.map(y => pyt[y] || null), partTotal]);
+    ws.mergeCells(pRow.number, 1, pRow.number, 3);
+    pRow.eachCell({ includeEmpty:true }, (c, cn) => {
+      c.fill = midBlue; c.font = { bold:true, color:{argb:'FFFFFFFF'}, size:11 };
+      c.border = blueBdr;
+      c.alignment = { horizontal: cn <= 3 ? 'left' : 'right', vertical:'middle' };
+      if (cn > 3 && c.value) c.numFmt = numFmt;
+    });
+
+    // 공급업체별 행
+    combos.forEach((combo, ci) => {
+      const [sloc, sup] = combo.split('|');
+      let rowTotal = 0;
+      const rowData = ['', sloc, sup];
+      yearArr.forEach(y => { const v = pivot[`${part}|${sloc}|${sup}|${y}`] || 0; rowData.push(v || null); rowTotal += v; });
+      rowData.push(rowTotal);
+      const r = ws.addRow(rowData);
+      r.eachCell({ includeEmpty:true }, (c, cn) => {
+        c.fill = ci % 2 === 0 ? white : altGray; c.border = bdr;
+        c.alignment = { horizontal: cn <= 3 ? 'left' : 'right', vertical:'middle' };
+        if (cn > 3 && c.value) c.numFmt = numFmt;
+        if (cn === yearArr.length + 4) c.font = { bold:true };
+      });
+      r.getCell(2).alignment = { horizontal:'left', vertical:'middle' };
+      r.getCell(3).alignment = { horizontal:'left', vertical:'middle' };
+    });
+  }
+
+  // 전체 합계 행
+  const gRow = ws.addRow(['전체 합계', '', '', ...yearArr.map(y => records.filter(r => r.yr === y).reduce((a, r) => a + r.qty, 0)), grandSum]);
+  ws.mergeCells(gRow.number, 1, gRow.number, 3);
+  gRow.eachCell({ includeEmpty:true }, (c, cn) => {
+    c.fill = darkBlue; c.font = { bold:true, color:{argb:'FFFFFFFF'}, size:11 };
+    c.border = blueBdr;
+    c.alignment = { horizontal: cn <= 3 ? 'left' : 'right', vertical:'middle' };
+    if (cn > 3 && c.value) c.numFmt = numFmt;
   });
 
-  // ── 다운로드 ──
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url    = URL.createObjectURL(blob);
-  const a      = document.createElement('a');
-  a.href       = url;
-  a.download   = '공장별_연도별_피벗.xlsx';
-  a.click();
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'SAP_피벗테이블.xlsx'; a.click();
   URL.revokeObjectURL(url);
 }
 </script>
